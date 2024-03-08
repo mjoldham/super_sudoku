@@ -2,18 +2,35 @@
 //
 
 #include <iostream>
+using std::cout;
+using std::cin;
+using std::endl;
+using std::string;
+
+void GenerateGrid()
+{
+	for (int j1 = 0; j1 < 3; j1++)
+	{
+		for (int j2 = 0; j2 < 3; j2++)
+		{
+			cout << "  ";
+			for (int i1 = 0; i1 < 3; i1++)
+			{
+				for (int i2 = 0; i2 < 3; i2++)
+				{
+					cout << "_ ";
+				}
+				cout << " ";
+			}
+			cout << endl;
+		}
+		cout << endl;
+	}
+}
 
 int main()
 {
-    for (int i = 0; i < 9; i++)
-    {
-        for (int j = 0; j < 9; j++)
-        {
-            std::cout << "_ ";
-        }
-
-        std::cout << std::endl;
-    }
+	GenerateGrid();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
