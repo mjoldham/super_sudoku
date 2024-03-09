@@ -2,23 +2,67 @@
 //
 
 #include <iostream>
-using std::cout;
-using std::cin;
-using std::endl;
-using std::string;
+#include <random>
+#include <algorithm>
+#include <cstdlib>
+using namespace std;
 
-void GenerateGrid()
+int RandomRange(int n)
+{
+	n = clamp(n, 0, RAND_MAX);
+	const int bucketSize = RAND_MAX / n;
+
+	int r;
+	do
+	{
+		r = rand() / bucketSize;
+	}
+	while (r >= n);
+
+	return r;
+}
+
+struct Grid9x9
+{
+	int values[9][9];
+};
+
+Grid9x9 GenerateGrid()
+{
+	srand(time(0));
+	Grid9x9 grid;
+	for (int i = 0; i < 9; i++)
+	{
+		for (int j = 0; j < 9; j++)
+		{
+			grid.values[i][j] = RandomRange(10);
+		}
+	}
+
+	return grid;
+}
+
+void DrawGrid(const Grid9x9& grid)
 {
 	for (int j1 = 0; j1 < 3; j1++)
 	{
 		for (int j2 = 0; j2 < 3; j2++)
 		{
+			int j = j1 * 3 + j2;
 			cout << "  ";
 			for (int i1 = 0; i1 < 3; i1++)
 			{
 				for (int i2 = 0; i2 < 3; i2++)
 				{
-					cout << "_ ";
+					int value = grid.values[i1 * 3 + i2][j];
+					if (value == 0)
+					{
+						cout << "_ ";
+					}
+					else
+					{
+						cout << value << " ";
+					}
 				}
 				cout << " ";
 			}
@@ -30,7 +74,8 @@ void GenerateGrid()
 
 int main()
 {
-	GenerateGrid();
+	Grid9x9 grid = GenerateGrid();
+	DrawGrid(grid);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
