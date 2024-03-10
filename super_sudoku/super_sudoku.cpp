@@ -32,28 +32,45 @@ struct Grid9x9
 	}
 };
 
+struct NumberTally
+{
+	int rowCount[9][9], colCount[9][9], subCount[9][9];
+	NumberTally() : rowCount{ 0 }, colCount{ 0 }, subCount{ 0 }
+	{}
+};
+
 Grid9x9 GenerateGrid()
 {
 	srand(time(0));
 	Grid9x9 grid;
+	NumberTally tally;
 	for (int i = 0; i < 9; i++)
 	{
 		for (int j = 0; j < 9; j++)
 		{
-			grid.values[i][j] = RandomRange(10);
+			int value = RandomRange(10);
+			if (value != 0)
+			{
+				int valIndex = value - 1;
+				int ij = (i / 3) * 3 + j / 3;
+				if (tally.rowCount[i][valIndex] > 0 ||
+					tally.colCount[j][valIndex] > 0 ||
+					tally.subCount[ij][valIndex] > 0)
+				{
+					value = 0;
+				}
+				else
+				{
+					tally.rowCount[i][valIndex] = tally.colCount[j][valIndex] = tally.subCount[ij][valIndex] = 1;
+				}
+			}
+
+			grid.values[i][j] = value;
 		}
 	}
 
 	return grid;
 }
-
-struct NumberTally
-{
-	int rowCount[9][9], colCount[9][9], subCount[9][9];
-	NumberTally() : rowCount{ 0 }, colCount{ 0 }, subCount{ 0 }
-	{
-	}
-};
 
 NumberTally CountRepeats(Grid9x9 inGrid)
 {
