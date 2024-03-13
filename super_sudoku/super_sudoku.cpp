@@ -1,12 +1,13 @@
 // super_sudoku.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <iostream>
-#include <random>
 #include <algorithm>
-#include <cstdlib>
+#include <array>
 #include <bitset>
 #include <chrono>
+#include <cstdlib>
+#include <iostream>
+#include <random>
 
 using namespace std;
 
@@ -42,7 +43,7 @@ struct NumberTally
 
 Grid9x9 GenerateGrid()
 {
-	srand(time(0));
+	srand(time(NULL));
 	Grid9x9 grid;
 	NumberTally tally;
 	for (int i = 0; i < 9; i++)
@@ -218,7 +219,7 @@ struct ConstraintMatrix
 	int rowCount = 9 * 81, colCount = 4 * 81;
 	bool values[9 * 81][4 * 81];
 
-	ConstraintMatrix() : values{ 0 }
+	ConstraintMatrix() : values { 0 }
 	{
 		for (int i = 0; i < 9; i++)
 		{
@@ -352,9 +353,10 @@ void CopyMatrix(const ConstraintMatrix& fromMat, ConstraintMatrix& toMat)
 }
 
 int iter = 0;
-bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int pos = 0, int r1 = 0)
+bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& rowIndexer,
+	int pos = 0, int r1 = 0)
 {
-	if (/*!matrix.rowCount || !matrix.colCount || */pos > 80) // If matrix is empty, exact-cover problem is solved so terminate successfully.
+	if (pos > 80) // If all cells filled, exact-cover problem is solved so terminate successfully.
 	{
 		return true;
 	}
@@ -362,11 +364,10 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int pos = 0, int r1 = 0)
 	iter++;
 	bool isSuccessful = false;
 	
-	// TODO: no need for row loop, pick rand candidate and calc row index.
-	for (; r1 < matrix.rowCount; r1++) // Should be non-deterministic.
+	for (; r1 < matrix.rowCount; r1++)
 	{
-		// Chooses a candidate for a cell.
-		if (matrix.values[r1][pos])
+		// Chooses a random candidate for a cell.
+		if (matrix.values[rowIndexer[r1]][pos])
 		{
 			isSuccessful = true;
 			break;
@@ -381,7 +382,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int pos = 0, int r1 = 0)
 	// Adds chosen candidate to the grid.
 	int i, j;
 	GetGridIndices(pos, i, j);
-	int cand = r1 % 9;
+	int cand = rowIndexer[r1] % 9;
 	grid.values[i][j] = cand + 1;
 
 	int row = GetRowConstraint(i, cand);
@@ -393,7 +394,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int pos = 0, int r1 = 0)
 	DeleteRows(*mat1, pos, row, col, box);
 	DeleteConstraints(*mat1, pos, row, col, box);
 
-	if (XSolver(*mat1, grid, pos + 1))
+	if (XSolver(*mat1, grid, rowIndexer, pos + 1))
 	{
 		CopyMatrix(*mat1, matrix);
 		delete mat1;
@@ -404,7 +405,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int pos = 0, int r1 = 0)
 	// If the solver fails, then we must choose a different candidate for this position.
 	for (r1++; r1 < matrix.rowCount; r1++)
 	{
-		if (XSolver(matrix, grid, pos, r1))
+		if (XSolver(matrix, grid, rowIndexer, pos, r1))
 		{
 			return true;
 		}
@@ -419,8 +420,18 @@ int main()
 	Grid9x9 grid;
 	ConstraintMatrix matrix;
 
+	array<int, 9 * 81> rowIndexer{ };
+	for (int r = 0; r < rowIndexer.size(); r++)
+	{
+		rowIndexer[r] = r;
+	}
+
+	random_device rd;
+	mt19937 g(rd());
+	shuffle(rowIndexer.begin(), rowIndexer.end(), g);
+
 	auto start = chrono::high_resolution_clock::now();
-	if (!XSolver(matrix, grid))
+	if (!XSolver(matrix, grid, rowIndexer))
 	{
 		cout << "XSolver failed at iteration " << iter << endl;
 	}
@@ -430,7 +441,6 @@ int main()
 
 	auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 	cout << "XSolver finished in " << iter << " iterations and " << duration.count() << "s" << endl;
-
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
