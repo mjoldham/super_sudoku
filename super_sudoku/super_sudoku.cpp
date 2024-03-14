@@ -10,6 +10,7 @@
 #include <random>
 
 using namespace std;
+using namespace chrono;
 
 int RandomRange(int n)
 {
@@ -352,7 +353,36 @@ void CopyMatrix(const ConstraintMatrix& fromMat, ConstraintMatrix& toMat)
 	}
 }
 
-int iter = 0;
+int iter = 0, totalIter = 0, incr = 0, incrSize = 100000;
+void TickIterCounter()
+{
+	totalIter++;
+	if (++iter / incrSize > incr)
+	{
+		if (incr > 0)
+		{
+			for (int i = 0; i < log10(iter); i++)
+			{
+				cout << "\b";
+			}
+		}
+		incr = iter / incrSize;
+		cout << iter;
+	}
+}
+
+steady_clock::time_point startTime;
+
+inline void StartTimer()
+{
+	startTime = high_resolution_clock::now();
+}
+
+inline long GetTimeSinceStart()
+{
+	return duration_cast<seconds>(high_resolution_clock::now() - startTime).count();
+}
+
 bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& rowIndexer,
 	int pos = 0, int r1 = 0)
 {
@@ -361,7 +391,12 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& 
 		return true;
 	}
 
-	iter++;
+	if (GetTimeSinceStart() > 15)
+	{
+		return false;
+	}
+
+	TickIterCounter();
 	bool isSuccessful = false;
 	
 	for (; r1 < matrix.rowCount; r1++)
@@ -426,21 +461,28 @@ int main()
 		rowIndexer[r] = r;
 	}
 
-	random_device rd;
-	mt19937 g(rd());
-	shuffle(rowIndexer.begin(), rowIndexer.end(), g);
-
-	auto start = chrono::high_resolution_clock::now();
-	if (!XSolver(matrix, grid, rowIndexer))
+	int shuffles = 0;
+	auto start = high_resolution_clock::now();
+	do
 	{
-		cout << "XSolver failed at iteration " << iter << endl;
+		iter = incr = 0;
+		cout << endl << "Shuffle " << ++shuffles << ": ";
+
+		random_device rd;
+		mt19937 g(rd());
+		shuffle(rowIndexer.begin(), rowIndexer.end(), g);
+
+		StartTimer();
 	}
-	auto end = chrono::high_resolution_clock::now();
+	while (!XSolver(matrix, grid, rowIndexer));
+	auto end = high_resolution_clock::now();
+
+	cout << endl;
+	cout << "Total iterations: " << totalIter << endl;
+	cout << "Total time: " << duration_cast<seconds>(end - start).count() << "s" << endl;
+	cout << endl;
 
 	DrawGrid(grid);
-
-	auto duration = chrono::duration_cast<chrono::seconds>(end - start);
-	cout << "XSolver finished in " << iter << " iterations and " << duration.count() << "s" << endl;
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
