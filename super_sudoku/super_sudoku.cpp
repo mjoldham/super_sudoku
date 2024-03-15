@@ -203,24 +203,34 @@ void DrawGrid(const Grid9x9& grid)
 	}*/
 }
 
-struct ConstraintMatrix
+class ConstraintMatrix
 {
 	// There are 9 candidates for each of the 81 cells, represented by the rows.
 	// (e.g. a 5 at (2,3) is represented by its own row.)
 	
-	// There are 4 constraints (cell, row, column, box) for each of the 81 cells, represented by the columns.
-	// By occupying a cell a candidate therefore satisfies these 4 constraints, marked by 1s in their columns.
-	// (e.g. 5 at (2,3) satisfies having a number for 1) the cell (2,3), 2) the 2nd row, 3) the 3rd column,
-	//  and 4) the 1st box.)
-	// Each column therefore has 9 candidates that satisfy its constraint.
+	// There are 4 constraints represented by columns that each row satisfies:
+	// 1) One number for each of the 81 cells.
+	// 2) 9 unique numbers in each of the 9 rows.
+	// 3) 9 unique numbers in each of the 9 columns.
+	// 4) 9 unique numbers in each of the 9 boxes.
+	
+	// (e.g. 5 at (2,3) satisfies having 1) a number in cell (2,3), 2) a 5 in the 2nd row,
+	// 3) a 5 in the 3rd column, and 4) a 5 in the 1st box.)
+	
+private:
+	static const int rowCount = 9 * 81, colCount = 4 * 81;
+	bool values[rowCount][colCount];
 
-	// Row is given by (row * 9 + col) * 9 + (candidate-1).
-	// Column is given by (row * 9 + col) * 4 + constr.
-	// First 81 columns are for grid positions, latter 3*81 are row/col/box * 9 + (candidate-1).
-	int rowCount = 9 * 81, colCount = 4 * 81;
-	bool values[9 * 81][4 * 81];
+	void DeleteRow(int r, int i, int j, int cand)
+	{
+		int row = GetRowConstraint(i, cand);
+		int col = GetColumnConstraint(j, cand);
+		int box = GetBoxConstraint(i, j, cand);
+		values[r][i * 9 + j] = values[r][row] = values[r][col] = values[r][box] = 0;
+	}
 
-	ConstraintMatrix() : values { 0 }
+public:
+	ConstraintMatrix() : values{}
 	{
 		for (int i = 0; i < 9; i++)
 		{
@@ -239,121 +249,72 @@ struct ConstraintMatrix
 			}
 		}
 	}
-};
 
-void DeleteRows(ConstraintMatrix& matrix, int pos, int row, int col, int box)
-{
-	//int count = matrix.rowCount;
-	// Deletes rows that satisfy the same constraints.
-	for (int r = 0; r < matrix.rowCount; r++)
+	void DeleteRowsColumns(int pos, int i1, int j1, int cand1)
 	{
-		if (!matrix.values[r][pos] && !matrix.values[r][row] && !matrix.values[r][col] && !matrix.values[r][box])
-		{
-			continue;
-		}
+		// Deletes rows that satisfy the same constraints.
+		int row = GetRowConstraint(i1, cand1);
+		int col = GetColumnConstraint(j1, cand1);
+		int box = GetBoxConstraint(i1, j1, cand1);
 
-		for (int c = 0; c < matrix.colCount; c++)
+		for (int i = 0; i < 9; i++)
 		{
-			matrix.values[r][c] = 0;
-		}
-
-		/*if (r + 1 < matrix.rowCount)
-		{
-			for (int r2 = r; r2 < matrix.rowCount - 1; r2++)
+			for (int j = 0; j < 9; j++)
 			{
-				for (int c = 0; c < matrix.colCount; c++)
+				for (int cand = 0; cand < 9; cand++)
 				{
-					matrix.values[r2][c] = matrix.values[r2 + 1][c];
+					int r = (i * 9 + j) * 9 + cand;
+					if (values[r][pos] || values[r][row] || values[r][col] || values[r][box])
+					{
+						DeleteRow(r, i, j, cand);
+					}
 				}
 			}
-			r--;
 		}
-
-		matrix.rowCount--;*/
 	}
 
-	//cout << count - matrix.rowCount << " deleted rows" << endl;
-}
-
-void DeleteConstraints(ConstraintMatrix& matrix, int pos, int row, int col, int box)
-{
-	for (int r = 0; r < matrix.rowCount; r++)
+	void Print(int posLen, int constrLen)
 	{
-		matrix.values[r][pos] = matrix.values[r][row] = matrix.values[r][col] = matrix.values[r][box] = 0;
-	}
-	//// Deletes the position constraint.
-	//int c;
-	//for (c = pos; c < row - 1; c++)
-	//{
-	//	for (int r = 0; r < matrix.rowCount; r++)
-	//	{
-	//		matrix.values[r][c] = matrix.values[r][c + 1];
-	//	}
-	//}
-
-	//// Deletes the row constraint.
-	//for (; c < col - 2; c++)
-	//{
-	//	for (int r = 0; r < matrix.rowCount; r++)
-	//	{
-	//		matrix.values[r][c] = matrix.values[r][c + 2];
-	//	}
-	//}
-
-	//// Deletes the column constraint.
-	//for (; c < box - 3; c++)
-	//{
-	//	for (int r = 0; r < matrix.rowCount; r++)
-	//	{
-	//		matrix.values[r][c] = matrix.values[r][c + 3];
-	//	}
-	//}
-
-	//// Deletes the box constraint.
-	//for (; c < matrix.colCount - 4; c++)
-	//{
-	//	for (int r = 0; r < matrix.rowCount; r++)
-	//	{
-	//		matrix.values[r][c] = matrix.values[r][c + 4];
-	//	}
-	//}
-
-	//matrix.colCount -= 4;
-}
-
-void PrintMatrix(ConstraintMatrix& matrix, int posLen, int constrLen)
-{
-	for (int r1 = 0; r1 < posLen; r1++)
-	{
-		for (int r2 = 0; r2 < 9; r2++)
+		for (int r1 = 0; r1 < posLen; r1++)
 		{
-			for (int c1 = 0; c1 < 4; c1++)
+			for (int r2 = 0; r2 < 9; r2++)
 			{
-				for (int c2 = 0; c2 < constrLen; c2++)
+				for (int c1 = 0; c1 < 4; c1++)
 				{
-					cout << " " << (int)matrix.values[r1 * 9 + r2][c1 * 81 + c2];
+					for (int c2 = 0; c2 < constrLen; c2++)
+					{
+						cout << " " << (int)values[r1 * 9 + r2][c1 * 81 + c2];
+					}
+					cout << " ";
 				}
-				cout << " ";
+				cout << endl;
 			}
 			cout << endl;
 		}
-		cout << endl;
 	}
 
-}
-
-void CopyMatrix(const ConstraintMatrix& fromMat, ConstraintMatrix& toMat)
-{
-	for (int r = 0; r < toMat.rowCount; r++)
+	const int& RowCount() const
 	{
-		for (int c = 0; c < toMat.colCount; c++)
-		{
-			toMat.values[r][c] = fromMat.values[r][c];
-		}
+		return rowCount;
 	}
-}
 
-int iter = 0, totalIter = 0, incr = 0, incrSize = 100000;
+	const int& ColCount() const
+	{
+		return colCount;
+	}
+
+	const bool& operator()(int i, int j) const
+	{
+		return values[i][j];
+	}
+	
+	bool& operator()(int i, int j)
+	{
+		return values[i][j];
+	}
+};
+
+int iter = 0, totalIter = 0, incr = 0, incrSize = 1000;
 void TickIterCounter()
 {
 	totalIter++;
@@ -380,10 +341,10 @@ inline void StartTimer()
 
 inline long GetTimeSinceStart()
 {
-	return duration_cast<seconds>(high_resolution_clock::now() - startTime).count();
+	return duration_cast<milliseconds>(high_resolution_clock::now() - startTime).count();
 }
 
-bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& rowIndexer,
+bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& rowIndexer, int timeOut = 300,
 	int pos = 0, int r1 = 0)
 {
 	if (pos > 80) // If all cells filled, exact-cover problem is solved so terminate successfully.
@@ -391,7 +352,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& 
 		return true;
 	}
 
-	if (GetTimeSinceStart() > 15)
+	if (GetTimeSinceStart() >= timeOut)
 	{
 		return false;
 	}
@@ -399,10 +360,12 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& 
 	TickIterCounter();
 	bool isSuccessful = false;
 	
-	for (; r1 < matrix.rowCount; r1++)
+	r1 = max(r1, pos * 9);
+	int endOfCands = pos * 9 + 9;
+	for (; r1 < endOfCands; r1++)
 	{
 		// Chooses a random candidate for a cell.
-		if (matrix.values[rowIndexer[r1]][pos])
+		if (matrix(rowIndexer[r1], pos))
 		{
 			isSuccessful = true;
 			break;
@@ -420,27 +383,20 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& 
 	int cand = rowIndexer[r1] % 9;
 	grid.values[i][j] = cand + 1;
 
-	int row = GetRowConstraint(i, cand);
-	int col = GetColumnConstraint(j, cand);
-	int box = GetBoxConstraint(i, j, cand);
+	ConstraintMatrix* mat1 = new ConstraintMatrix(matrix);
+	mat1->DeleteRowsColumns(pos, i, j, cand);
 
-	ConstraintMatrix* mat1 = new ConstraintMatrix();
-	CopyMatrix(matrix, *mat1);
-	DeleteRows(*mat1, pos, row, col, box);
-	DeleteConstraints(*mat1, pos, row, col, box);
-
-	if (XSolver(*mat1, grid, rowIndexer, pos + 1))
+	if (XSolver(*mat1, grid, rowIndexer, timeOut, pos + 1))
 	{
-		CopyMatrix(*mat1, matrix);
 		delete mat1;
 		return true;
 	}
-
 	delete mat1;
+
 	// If the solver fails, then we must choose a different candidate for this position.
-	for (r1++; r1 < matrix.rowCount; r1++)
+	for (r1++; r1 < endOfCands; r1++)
 	{
-		if (XSolver(matrix, grid, rowIndexer, pos, r1))
+		if (XSolver(matrix, grid, rowIndexer, timeOut, pos, r1))
 		{
 			return true;
 		}
@@ -453,36 +409,53 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, const array<int, 9 * 81>& 
 int main()
 {
 	Grid9x9 grid;
-	ConstraintMatrix matrix;
-
 	array<int, 9 * 81> rowIndexer{ };
 	for (int r = 0; r < rowIndexer.size(); r++)
 	{
 		rowIndexer[r] = r;
 	}
 
-	int shuffles = 0;
-	auto start = high_resolution_clock::now();
-	do
+	while (true)
 	{
-		iter = incr = 0;
-		cout << endl << "Shuffle " << ++shuffles << ": ";
+		cout << "Generate new grid? [y/n]" << endl;
+		string response;
+		cin >> response;
+		cout << endl;
 
-		random_device rd;
-		mt19937 g(rd());
-		shuffle(rowIndexer.begin(), rowIndexer.end(), g);
+		if (response.compare("y"))
+		{
+			break;
+		}
 
-		StartTimer();
+		ConstraintMatrix matrix;
+
+		int shuffles = totalIter = 0;
+		auto start = high_resolution_clock::now();
+		do
+		{
+			iter = incr = 0;
+			cout << endl << "Shuffle " << ++shuffles << ": ";
+
+			random_device rd;
+			mt19937 g(rd());
+
+			for (int pos = 0; pos < 81; pos++)
+			{
+				shuffle(rowIndexer.begin() + pos * 9, rowIndexer.begin() + pos * 9 + 9, g);
+			}
+
+			StartTimer();
+		}
+		while (!XSolver(matrix, grid, rowIndexer));
+		auto end = high_resolution_clock::now();
+
+		cout << endl;
+		cout << "Total iterations: " << totalIter << endl;
+		cout << "Total time: " << duration_cast<milliseconds>(end - start).count() << "ms" << endl;
+		cout << endl;
+
+		DrawGrid(grid);
 	}
-	while (!XSolver(matrix, grid, rowIndexer));
-	auto end = high_resolution_clock::now();
-
-	cout << endl;
-	cout << "Total iterations: " << totalIter << endl;
-	cout << "Total time: " << duration_cast<seconds>(end - start).count() << "s" << endl;
-	cout << endl;
-
-	DrawGrid(grid);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
