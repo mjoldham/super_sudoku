@@ -6,6 +6,7 @@
 #include <bitset>
 #include <chrono>
 #include <cstdlib>
+#include "DLX.h"
 #include <iostream>
 #include <random>
 
