@@ -1,12 +1,13 @@
 // super_sudoku.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include "Grid.h"
+
 #include <algorithm>
 #include <array>
 #include <bitset>
 #include <chrono>
 #include <cstdlib>
-#include "DLX.h"
 #include <iostream>
 #include <random>
 
@@ -230,7 +231,7 @@ public:
 		{
 			StartTimer();
 			iter = incr = 0;
-			cout << endl << "Shuffle " << ++shuffles << ": ";
+			//cout << endl << "Shuffle " << ++shuffles << ": ";
 
 			matrix.Shuffle();
 		}
@@ -332,7 +333,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int timeOut, int pos, int 
 		return false;
 	}
 
-	TickIterCounter();
+	//TickIterCounter();
 	bool isSuccessful = false;
 	
 	r1 = max(r1, pos * 9);
@@ -351,6 +352,8 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int timeOut, int pos, int 
 	{
 		return false;
 	}
+
+	totalIter++;
 
 	// Adds chosen candidate to the grid.
 	int i, j;
@@ -384,6 +387,7 @@ bool XSolver(ConstraintMatrix& matrix, Grid9x9& grid, int timeOut, int pos, int 
 int main()
 {
 	Grid9x9 grid;
+	Sudoku::Grid dlxGrid;
 	while (true)
 	{
 		cout << "Generate new grid? [y/n]" << endl;
@@ -396,8 +400,17 @@ int main()
 			break;
 		}
 
+		cout << "X Algorithm" << endl;
+
 		grid.Generate();
 		grid.Draw();
+
+		cout << "DLX Algorithm" << endl << endl;
+		auto start = high_resolution_clock::now();;
+		dlxGrid.Generate();
+		auto end = high_resolution_clock::now();
+		cout << "Total time: " << duration_cast<microseconds>(end - start).count() << "us" << endl << endl;
+		dlxGrid.Draw();
 	}
 }
 
