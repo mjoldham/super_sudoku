@@ -10,7 +10,9 @@ namespace Sudoku
 		Grid();
 
 		void Generate();
-		void Draw();
+		void Draw(bool);
+		const int Get(int, int) const;
 		void Set(int, int, int);
+		void ToggleHide(int, int);
 	};
 }

@@ -5,6 +5,8 @@
 #include <array>
 #include <iostream>
 #include <random>
+#include <stack>
+#include <vector>
 
 using namespace std;
 
@@ -148,7 +150,112 @@ namespace Sudoku
 		prevCol = node;
 	}
 
-	void ConstraintMatrix::Shuffle(std::array<int, 9>& indexer)
+#pragma warning( disable : 28182 )
+	int ConstraintMatrix::Search(Grid* grid)
+	{
+		// If no more columns present, a solution is found.
+		if (root->right == root)
+		{
+			return 1;
+		}
+
+		// Chooses column to add to solution.
+		Node* col = root->right;
+		col->Cover();
+
+		int solnCount = 0;
+		for (Node* i = col->down; i != col; i = i->down)
+		{
+			// Adds the row's candidate to the grid.
+			if (grid)
+			{
+				grid->Set(i->candidate->i, i->candidate->j, i->candidate->value);
+			}
+
+			for (Node* j = i->right; j != i; j = j->right)
+			{
+				j->Cover();
+			}
+
+			solnCount += Search(grid);
+
+			for (Node* j = i->left; j != i; j = j->left)
+			{
+				j->Uncover();
+			}
+
+			if (solnCount > 0)
+			{
+				if (grid)
+				{
+					break;
+				}
+				else if (solnCount > 1)
+				{
+					break;
+				}
+			}
+		}
+
+		col->Uncover();
+		return solnCount;
+	}
+#pragma warning( default : 28182 )
+
+	typedef array<Node*, 81>::reverse_iterator row_iterator;
+	row_iterator ConstraintMatrix::Cover(const Grid* grid, array<Node*, 81>& rows)
+	{
+		// Goes through the grid and covers the columns corresponding to the filled cells.
+		Node* col = root;
+		int index = 0;
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				// Iterates over the position columns looking for filled cells.
+				col = col->right;
+				int value = grid->Get(i, j);
+				if (value < 1)
+				{
+					continue;
+				}
+
+				// Searches the shuffled rows for the candidate.
+				Node* r = col->down;
+				while (r->candidate->value != value)
+				{
+					r = r->down;
+				}
+
+				// Saves the row to be uncovered after search.
+				rows[index++] = r;
+				r->Cover();
+
+				for (Node* c = r->right; c != r; c = c->right)
+				{
+					c->Cover();
+				}
+			}
+		}
+
+		return make_reverse_iterator(rows.begin() + index);
+	}
+
+	void ConstraintMatrix::Uncover(const Grid* grid, row_iterator firstAdded, row_iterator lastAdded)
+	{
+		for (row_iterator iter = lastAdded; iter != firstAdded; iter++)
+		{
+			Node* r = *iter;
+			for (Node* c = r->left; c != r; c = c->left)
+			{
+				c->Uncover();
+			}
+
+			r->Uncover();
+		}
+	}
+
+	void Shuffle(std::array<int, 9>& indexer)
 	{
 		random_device rd;
 		mt19937 g(rd());
@@ -241,87 +348,19 @@ namespace Sudoku
 		delete[] candidates;
 	}
 
-	void ConstraintMatrix::Print()
+	void ConstraintMatrix::Generate(Grid* grid)
 	{
-		/*for (int i = 0; i < 9 * 81; i++)
-		{
-			Candidate cand = candidates[i];
-			cout << "(" << cand.i << "," << cand.j << ") = " << cand.value << endl;
-		}*/
+		Search(grid);
 	}
 
-#pragma warning( disable : 28182 )
-	int ConstraintMatrix::Search(Grid* grid, SearchOption option, int& iter)
+	bool ConstraintMatrix::Solve(const Grid* grid)
 	{
-		// If no more columns present, a solution is found.
-		if (root->right == root)
-		{
-			if (option != FindFirst)
-			{
-				grid->Draw();
-			}
-			else
-			{
-				cout << "Total iterations: " << iter << endl;
-			}
+		// Covers the columns corresponding to the filled cells and checks for a unique solution before restoring.
+		array<Node*, 81> rows{};
+		auto end = Cover(grid, rows);
+		bool isUnique = Search() == 1;
+		Uncover(grid, rows.rend(), end);
 
-			return 1;
-		}
-
-		iter++;
-
-		// Chooses column to add to solution.
-		Node* col = root->right;
-		col->Cover();
-
-		int solnCount = 0;
-		for (Node* i = col->down; i != col; i = i->down)
-		{
-			// Adds the row's candidate to the grid.
-			grid->Set(i->candidate->i, i->candidate->j, i->candidate->value);
-
-			for (Node* j = i->right; j != i; j = j->right)
-			{
-				j->Cover();
-			}
-
-			solnCount += Search(grid, option, iter);
-
-			for (Node* j = i->left; j != i; j = j->left)
-			{
-				j->Uncover();
-			}
-
-			if (solnCount > 0)
-			{
-				if (option == FindFirst)
-				{
-					break;
-				}
-				else if (option == FindUnique && solnCount > 1)
-				{
-					break;
-				}
-			}
-			else
-			{
-				iter++;
-			}
-		}
-
-		col->Uncover();
-		return solnCount;
-	}
-#pragma warning( default : 28182 )
-
-	void ConstraintMatrix::FindFirstSolution(Grid* grid)
-	{
-
-	}
-
-	ConstraintMatrix::NumSolutions ConstraintMatrix::CheckSolutions()
-	{
-		// Need a version of search that returns as soon as multiple solutions are found.
-		return None;
+		return isUnique;
 	}
 }
