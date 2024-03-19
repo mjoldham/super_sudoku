@@ -5,7 +5,6 @@
 #include <array>
 #include <iostream>
 #include <random>
-#include <stack>
 #include <vector>
 
 using namespace std;
@@ -14,9 +13,9 @@ namespace Sudoku
 {
 	struct Candidate
 	{
-		int i, j, value;
+		unsigned short i : 4, j : 4, value : 4;
 		Candidate() : i(), j(), value() {}
-		Candidate(int i, int j, int value) : i(i), j(j), value(value) {}
+		Candidate(unsigned short i, unsigned short j, unsigned short value) : i(i), j(j), value(value) {}
 	};
 
 	struct Node
@@ -169,7 +168,7 @@ namespace Sudoku
 			// Adds the row's candidate to the grid.
 			if (grid)
 			{
-				grid->Set(i->candidate->i, i->candidate->j, i->candidate->value);
+				grid->SetTrueValue(i->candidate->i, i->candidate->j, i->candidate->value);
 			}
 
 			for (Node* j = i->right; j != i; j = j->right)
@@ -214,7 +213,7 @@ namespace Sudoku
 			{
 				// Iterates over the position columns looking for filled cells.
 				col = col->right;
-				int value = grid->Get(i, j);
+				int value = grid->GetTrueValue(i, j);
 				if (value < 1)
 				{
 					continue;

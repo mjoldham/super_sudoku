@@ -77,7 +77,7 @@ namespace Sudoku
 		cout << endl;
 	}
 
-	void Grid::Draw(bool showComplete)
+	void Grid::Draw(bool showComplete) const
 	{
 		for (int i1 = 0; i1 < 3; i1++)
 		{
@@ -89,14 +89,30 @@ namespace Sudoku
 				{
 					for (int j2 = 0; j2 < 3; j2++)
 					{
-						int value = values[i][j1 * 3 + j2];
-						if (showComplete || value > 0)
+						int j = j1 * 3 + j2;
+						int value = values[i][j].trueValue;
+						if (showComplete)
 						{
 							cout << abs(value) << " ";
 						}
 						else
 						{
-							cout << "_ ";
+							if (value > 0)
+							{
+								cout << abs(value) << " ";
+							}
+							else
+							{
+								value = values[i][j].playerValue;
+								if (value > 0)
+								{
+									cout << value << " ";
+								}
+								else
+								{
+									cout << "_ ";
+								}
+							}
 						}
 					}
 					cout << " ";
@@ -107,19 +123,60 @@ namespace Sudoku
 		}
 	}
 
-	const int Grid::Get(int i, int j) const
+	void Grid::Clear()
 	{
-		return values[i][j];
+		//for (int i = 0; i < 81 * 3; i++)
+		//{
+		///	cout << "\b";
+		//}
 	}
 
-	void Grid::Set(int i, int j, int value)
+	int Grid::GetTrueValue(int i, int j) const
 	{
-		values[i][j] = value;
+		return values[i][j].trueValue;
+	}
+
+	int Grid::GetPlayerValue(int i, int j) const
+	{
+		return values[i][j].playerValue;
+	}
+
+	int Grid::GetPencilMarks(int i, int j) const
+	{
+		return values[i][j].pencilMarks;
+	}
+
+	bool Grid::GetPencilMark(int i, int j, int value) const
+	{
+		return values[i][j].pencilMarks & (1 << clamp(value - 1, 0, 8));
+	}
+
+	void Grid::SetTrueValue(int i, int j, int value)
+	{
+		values[i][j].trueValue = value;
+	}
+	
+	void Grid::SetPlayerValue(int i, int j, int value)
+	{
+		value = clamp(value, 1, 9);
+		if (values[i][j].playerValue == value)
+		{
+			values[i][j].playerValue = 0;
+		}
+		else
+		{
+			values[i][j].playerValue = value;
+		}
+	}
+
+	void Grid::SetPencilMarks(int i, int j, int value)
+	{
+		values[i][j].pencilMarks ^= 1 << clamp(value - 1, 0, 8);
 	}
 
 	void Grid::ToggleHide(int i, int j)
 	{
-		values[i][j] = -values[i][j];
+		values[i][j].trueValue = -values[i][j].trueValue;
 	}
 
 }
