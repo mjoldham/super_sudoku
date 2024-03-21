@@ -90,45 +90,44 @@ namespace Sudoku
 					for (int j2 = 0; j2 < 3; j2++)
 					{
 						int j = j1 * 3 + j2;
-						int value = values[i][j].trueValue;
 						if (showComplete)
 						{
-							cout << abs(value) << " ";
+							cout << abs(values[i][j].trueValue) << " ";
 						}
 						else
 						{
-							if (value > 0)
-							{
-								cout << abs(value) << " ";
-							}
-							else
-							{
-								value = values[i][j].playerValue;
-								if (value > 0)
-								{
-									cout << value << " ";
-								}
-								else
-								{
-									cout << "_ ";
-								}
-							}
+							cout << GetValue(i, j) << " ";
 						}
 					}
 					cout << " ";
 				}
-				cout << endl;
+				cout << "\n";
 			}
-			cout << endl;
+			cout << "\n";
 		}
 	}
 
-	void Grid::Clear()
+	void Grid::Draw(int highlightValue) const
 	{
-		//for (int i = 0; i < 81 * 3; i++)
-		//{
-		///	cout << "\b";
-		//}
+		for (int i1 = 0; i1 < 3; i1++)
+		{
+			for (int i2 = 0; i2 < 3; i2++)
+			{
+				int i = i1 * 3 + i2;
+				cout << "  ";
+				for (int j1 = 0; j1 < 3; j1++)
+				{
+					for (int j2 = 0; j2 < 3; j2++)
+					{
+						int j = j1 * 3 + j2;
+						cout << GetHighlight(i, j, highlightValue) << " ";
+					}
+					cout << " ";
+				}
+				cout << "\n";
+			}
+			cout << "\n";
+		}
 	}
 
 	int Grid::GetTrueValue(int i, int j) const
@@ -136,19 +135,53 @@ namespace Sudoku
 		return values[i][j].trueValue;
 	}
 
-	int Grid::GetPlayerValue(int i, int j) const
+	char Grid::GetValue(int i, int j) const
 	{
-		return values[i][j].playerValue;
+		int value = values[i][j].trueValue;
+		if (value < 0)
+		{
+			value = values[i][j].playerValue;
+		}
+
+		if (!value)
+		{
+			return '_';
+		}
+
+		return '0' + value;
 	}
 
-	int Grid::GetPencilMarks(int i, int j) const
+	char Grid::GetHighlight(int i, int j, int value) const
 	{
-		return values[i][j].pencilMarks;
-	}
+		// First checks for helper.
+		if (values[i][j].trueValue > 0)
+		{
+			if (values[i][j].trueValue == value)
+			{
+				return '0' + value;
+			}
 
-	bool Grid::GetPencilMark(int i, int j, int value) const
-	{
-		return values[i][j].pencilMarks & (1 << clamp(value - 1, 0, 8));
+			return 'x';
+		}
+
+		// If no helper checks for player value.
+		if (values[i][j].playerValue)
+		{
+			if (values[i][j].playerValue == value)
+			{
+				return '0' + value;
+			}
+
+			return 'x';
+		}
+
+		// If no player value checks for pencil mark.
+		if (values[i][j].pencilMarks & (1 << (value - 1)))
+		{
+			return 'o';
+		}
+
+		return '_';
 	}
 
 	void Grid::SetTrueValue(int i, int j, int value)
@@ -158,20 +191,31 @@ namespace Sudoku
 	
 	void Grid::SetPlayerValue(int i, int j, int value)
 	{
-		value = clamp(value, 1, 9);
+		if (value < 0)
+		{
+			values[i][j].pencilMarks ^= 1 << (-value - 1);
+			return;
+		}
+
 		if (values[i][j].playerValue == value)
 		{
 			values[i][j].playerValue = 0;
+			return;
 		}
-		else
-		{
-			values[i][j].playerValue = value;
-		}
+		
+		values[i][j].playerValue = value;
 	}
 
-	void Grid::SetPencilMarks(int i, int j, int value)
+	void Grid::Clear()
 	{
-		values[i][j].pencilMarks ^= 1 << clamp(value - 1, 0, 8);
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				values[i][j].playerValue = 0;
+				values[i][j].pencilMarks = 0;
+			}
+		}
 	}
 
 	void Grid::ToggleHide(int i, int j)
