@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -77,78 +78,119 @@ namespace Sudoku
 		cout << endl;
 	}
 
-	void Grid::Draw(bool showComplete) const
+	void Grid::Draw(function<char(const CellValues(&)[9][9], int, int)> charFunc) const
 	{
+		cout << "    ";
+		for (int j1 = 0; j1 < 3; j1++)
+		{
+			for (int j2 = 0; j2 < 3; j2++)
+			{
+				int j = j1 * 3 + j2;
+				cout << j + 1 << " ";
+			}
+			cout << " ";
+		}
+		cout << "\n\n";
+
 		for (int i1 = 0; i1 < 3; i1++)
 		{
 			for (int i2 = 0; i2 < 3; i2++)
 			{
 				int i = i1 * 3 + i2;
-				cout << "  ";
+				cout << i + 1 << "   ";
 				for (int j1 = 0; j1 < 3; j1++)
 				{
 					for (int j2 = 0; j2 < 3; j2++)
 					{
 						int j = j1 * 3 + j2;
-						if (showComplete)
-						{
-							cout << abs(values[i][j].trueValue) << " ";
-						}
-						else
-						{
-							cout << GetValue(i, j) << " ";
-						}
+						cout << charFunc(values, i, j) << " ";
 					}
 					cout << " ";
 				}
 				cout << "\n";
 			}
 			cout << "\n";
+		}
+	}
+
+	void Grid::Draw(bool showComplete) const
+	{
+		if (showComplete)
+		{
+			function<char(const CellValues(&)[9][9], int, int)> completeFunc =
+				[](const CellValues(&cells)[9][9], int i, int j)
+				{
+					return (char)('0' + abs(cells[i][j].trueValue));
+				};
+
+			Draw(completeFunc);
+		}
+		else
+		{
+			function<char(const CellValues(&)[9][9], int, int)> playerFunc =
+				[](const CellValues(&cells)[9][9], int i, int j)
+				{
+					int value = cells[i][j].trueValue;
+					if (value < 0)
+					{
+						value = cells[i][j].playerValue;
+					}
+
+					if (!value)
+					{
+						return '_';
+					}
+
+					return (char)('0' + value);
+				};
+
+			Draw(playerFunc);
 		}
 	}
 
 	void Grid::Draw(int highlightValue) const
 	{
-		for (int i1 = 0; i1 < 3; i1++)
-		{
-			for (int i2 = 0; i2 < 3; i2++)
+		auto highlightFunc =
+			[](const CellValues(&cells)[9][9], int i, int j, int value)
 			{
-				int i = i1 * 3 + i2;
-				cout << "  ";
-				for (int j1 = 0; j1 < 3; j1++)
+				// First checks for helper.
+				if (cells[i][j].trueValue > 0)
 				{
-					for (int j2 = 0; j2 < 3; j2++)
+					if (cells[i][j].trueValue == value)
 					{
-						int j = j1 * 3 + j2;
-						cout << GetHighlight(i, j, highlightValue) << " ";
+						return (char)('0' + value);
 					}
-					cout << " ";
+
+					return 'x';
 				}
-				cout << "\n";
-			}
-			cout << "\n";
-		}
+
+				// If no helper checks for player value.
+				if (cells[i][j].playerValue)
+				{
+					if (cells[i][j].playerValue == value)
+					{
+						return (char)('0' + value);
+					}
+
+					return 'x';
+				}
+
+				// If no player value checks for pencil mark.
+				if (cells[i][j].pencilMarks & (1 << (value - 1)))
+				{
+					return 'o';
+				}
+
+				return '_';
+			};
+		auto func = bind(highlightFunc, placeholders::_1, placeholders::_2, placeholders::_3, highlightValue);
+
+		Draw(func);
 	}
 
 	int Grid::GetTrueValue(int i, int j) const
 	{
 		return values[i][j].trueValue;
-	}
-
-	char Grid::GetValue(int i, int j) const
-	{
-		int value = values[i][j].trueValue;
-		if (value < 0)
-		{
-			value = values[i][j].playerValue;
-		}
-
-		if (!value)
-		{
-			return '_';
-		}
-
-		return '0' + value;
 	}
 
 	char Grid::GetHighlight(int i, int j, int value) const
