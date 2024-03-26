@@ -18,7 +18,9 @@ enum InputType
 {
 	Invalid = 0,
 	Highlight = 1,
-	Set = 2
+	Set = 2,
+	HiddenNaked = 3,
+	PointingClaiming = 4
 };
 
 InputType ParseInput(const string& str, int& i, int& j, int& value)
@@ -48,7 +50,22 @@ InputType ParseInput(const string& str, int& i, int& j, int& value)
 		return (InputType)(allValid * (int)InputType::Set);
 
 	default:
+		break;
+	}
+
+	if (str.size() < 7 || str.size() % 3 != 1)
+	{
 		return InputType::Invalid;
+	}
+
+	if (str[0] == 'h' || str[0] == 'n')
+	{
+		return InputType::HiddenNaked;
+	}
+
+	if (str[0] == 'p' || str[0] == 'c')
+	{
+		return InputType::PointingClaiming;
 	}
 }
 
@@ -76,10 +93,16 @@ int main()
 			break;
 		}
 
-		PrintInstructions();
+		cout << "Use pencilmarks to indicate cells that [a] can contain a digit, or [b] cannot contain a digit?" << endl;
+		cin >> input;
+		cout << endl;
+
+		bool positive = !input.compare("a");
+
+		//PrintInstructions();
 
 		grid.Clear();
-		grid.Generate();
+		grid.Generate(positive);
 		grid.Draw(false);
 
 		int highlight = 0, value = 0;
@@ -94,14 +117,19 @@ int main()
 
 			int i, j;
 			inputType = ParseInput(input, i, j, value);
-			if (inputType == InputType::Invalid)
+
+			vector<tuple<int, int, int>> digitsCells;
+			int count = input.size() / 3;
+
+			bool skip = false;
+			switch (inputType)
 			{
+			case InputType::Invalid:
 				cout << "Entered input is invalid. Try again." << endl;
-				continue;
-			}
-			
-			if (inputType == InputType::Highlight)
-			{
+				skip = true;
+				break;
+
+			case InputType::Highlight:
 				if (highlight == value)
 				{
 					highlight = 0;
@@ -113,11 +141,46 @@ int main()
 					grid.Draw(value);
 				}
 
-				continue;
+				skip = true;
+				break;
+
+			case InputType::Set:
+				grid.SetPlayerValue(i, j, value);
+				break;
+
+			case InputType::HiddenNaked:
+				for (int k = 0; k < count; k++)
+				{
+					int i1 = ToInt(input, count + 2 * k + 1) - 1;
+					int j1 = ToInt(input, count + 2 * k + 2) - 1;
+					digitsCells.emplace_back(ToInt(input, k + 1), i1, j1);
+				}
+
+				if (input[0] == 'h')
+				{
+					cout << "Hidden subset" << endl;
+					grid.HiddenSubset(digitsCells);
+				}
+
+				if (input[0] == 'n')
+				{
+					cout << "Naked subset" << endl;
+					grid.NakedSubset(digitsCells);
+				}
+				break;
+
+			/*case InputType::PointingClaiming:
+				break;*/
+
+			default:
+				break;
 			}
 
-			grid.SetPlayerValue(i, j, value);
-
+			if (skip)
+			{
+				continue;
+			}
+			
 			if (value < 0)
 			{
 				highlight = -value;
